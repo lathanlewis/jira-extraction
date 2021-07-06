@@ -1,0 +1,125 @@
+name: Verify
+
+on:
+  push:
+    tags-ignore:
+      - '**'
+    branches-ignore:
+      - 'main'
+  workflow_dispatch:
+    branches:
+      - '**'
+
+env:
+  GITHUB_TOKEN: ${{ secrets.ENG_STD_TOKEN }}
+  VPN_USERNAME: ${{ secrets.VPN_USERNAME }}
+  VPN_PASSWORD: ${{ secrets.VPN_PASSWORD }}
+  VPN_AUTH_CODE: ${{ secrets.VPN_AUTH_CODE }}
+  VPN_CLIENT_VERSION: 9.3.5-4367
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/cache@v2
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+          !~/.gradle/wrapper/dists/*/*/*.zip
+        key: gradle-build-${{ hashFiles('**/*.gradle*') }}
+        restore-keys: gradle-
+    - name: Setup Java
+      uses: actions/setup-java@v1
+      with:
+        java-version: '11'
+    - name: Code build
+      run: ./gradlew assemble
+
+  code-analysis:
+    name: Code analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            !~/.gradle/wrapper/dists/*/*/*.zip
+          key: gradle-check-${{ hashFiles('**/*.gradle*') }}
+          restore-keys: gradle-
+      - name: Setup Java
+        uses: actions/setup-java@v1
+        with:
+          java-version: '11'
+      - name: Code analysis
+        run: ./gradlew check -x test
+
+  unit-test:
+    name: Unit test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            !~/.gradle/wrapper/dists/*/*/*.zip
+          key: gradle-ut-${{ hashFiles('**/*.gradle*') }}
+          restore-keys: gradle-
+      - name: Setup Java
+        uses: actions/setup-java@v1
+        with:
+          java-version: '11'
+      - name: Unit test
+        run: ./gradlew test
+      - name: Unit test coverage
+        run: ./gradlew jacocoTestCoverageVerification
+
+  code-coverage:
+    name: Code coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: branch_name
+      - name: wget
+        uses: wei/wget@v1
+        with:
+          args: -O ./test-reporter-latest-linux-amd64 https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64
+      - name: Prepare codeclimate binary
+        run: sudo chmod +x ./test-reporter-latest-linux-amd64 && sudo chown $(whoami) ./test-reporter-latest-linux-amd64
+      - name: Run coverage
+        shell: bash
+        run: export GIT_COMMIT_SHA=$GITHUB_SHA && export GIT_BRANCH=${{ steps.branch_name.outputs.branch }} && . set-codeclimate-vars.sh &&  ./test-reporter-latest-linux-amd64 format-coverage -t jacoco $CODECLIMATE_JACOCO_RESULTS_PATH --debug
+      - name: Upload coverage
+        shell: bash
+        run: . set-codeclimate-vars.sh && ./test-reporter-latest-linux-amd64 upload-coverage --debug --id $CODECLIMATE_REPORTER_ID
+
+#  todo:
+#  integration-test:
+#    name: Integration test
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v2
+#      - uses: actions/cache@v2
+#        with:
+#          path: |
+#            ~/.gradle/caches
+#            ~/.gradle/wrapper
+#            !~/.gradle/wrapper/dists/*/*/*.zip
+#          key: gradle-it-${{ hashFiles('**/*.gradle*') }}
+#          restore-keys: gradle-
+#      - name: Setup Java
+#        uses: actions/setup-java@v1
+#        with:
+#          java-version: '11'
+#      - name: Deploy
+#        run: ./gradlew deploy
+#      - name: Integration test
+#        run: ./gradlew integrationTest

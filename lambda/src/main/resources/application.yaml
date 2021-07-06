@@ -1,0 +1,9 @@
+quarkus:
+  package:
+    type: native
+  native:
+    container-build: true
+    native-image-xmx: 8G
+  dynamodb:
+    aws:
+      region: us-east-1

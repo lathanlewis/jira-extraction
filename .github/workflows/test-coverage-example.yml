@@ -1,0 +1,37 @@
+# name: Verify PR
+
+# on: pull_request
+# env:
+#   aws_region: us-east-1
+
+# jobs:
+#   commit-build:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v2
+#       - uses: actions/setup-java@v1.4.3
+#         with:
+#           java-version: '11'
+#       - name: Extract branch name
+#         shell: bash
+#         run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+#         id: branch_name
+#       - name: wget
+#         uses: wei/wget@v1
+#         with:
+#           args: -O ./test-reporter-latest-linux-amd64 https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64
+#       - name: Prepare codeclimate binary
+#         run: sudo chmod +x ./test-reporter-latest-linux-amd64 && sudo chown $(whoami) ./test-reporter-latest-linux-amd64
+#       - name: Run tests
+#         run: ../gradlew test jacocoTestReport
+#         working-directory: ./backendnew 
+#       - name: Run coverage
+#         run: export GIT_COMMIT_SHA=$GITHUB_SHA && export GIT_BRANCH=${{ steps.branch_name.outputs.branch }} && export JACOCO_SOURCE_PATH=backendnew/src/main/java && ./test-reporter-latest-linux-amd64 format-coverage -t jacoco backendnew/build/reports/jacoco/test/jacocoTestReport.xml --debug 
+#       - name: Upload coverage
+#         run: ./test-reporter-latest-linux-amd64 upload-coverage --debug --id d8d535e8f751532298954a2f8bd9d8a3a5186cfa17ee70342068c9d0a8dc6de0
+
+# Define run tests and test coverage specifically steps for your project
+# Define JACOCO_SOURCE_PATH variable
+# Define path for jacoco coverage XML file in format_coverage
+# Define test reporter id in the upload coverage step
